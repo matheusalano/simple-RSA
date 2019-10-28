@@ -1,6 +1,21 @@
 import sys
 from random import getrandbits, randrange
 from math import gcd
+import binascii
+
+def stringToInt(text, N):
+    hex_data = binascii.hexlify(text.encode())
+    plain_text = int(hex_data, 16)
+
+    if plain_text > N:
+        raise Exception('plain text too large for key')
+
+    return plain_text
+
+def intToString(decrypted_text, N):
+    hex_data = hex(decrypted_text)[2:]
+
+    return binascii.unhexlify(hex_data).decode()
 
 def generateRandomPrime():
     primeCandidate = getrandbits(1024)
@@ -42,27 +57,47 @@ def extendedEuclidean(x, y):
         return (d, a, b)
     
 def encrypt(M, PK):
-    C = pow(M, PK[0], PK[1])
+    intM = stringToInt(M, PK[1])
+    C = pow(intM, PK[0], PK[1])
     return C
 
 def decrypt(C, SK):
+    #Verificar se hex(C)[2:] for > 512 pegar os 512 e decriptar até terminar
     M = pow(C, SK[0], SK[1] * SK[2])
-    return M
+    return intToString(M, SK[1] * SK[2])
 
 if __name__ == "__main__":
     sys.setrecursionlimit(1000000)
 
-    PK, SK = generateKeys()
-    print('Public Key', PK)
-    print('Secret Key', SK)
+    print('Options: \n1 - Generate secret and public key\n2 - Encrypt a message\n3 - Decrypt a message\n4 - Stop')
+    PK = None
+    SK = None
+    while True:
+        option = input('Enter the option: ')
 
-    M = input('Enter your message:')
-    C = encrypt(int(M), PK)
+        if option == '1':
+            PK, SK = generateKeys()
+            print(f'Public Key: {PK[0]}, {PK[1]}')
+            print(f'Secret Key: {SK[0]}, {SK[1]}, {SK[2]}')
+        elif option == '2':
+            PK = input('Enter Public Key separated by comma: ')
+            PK = PK.split(', ')
+            PK = (int(PK[0]), int(PK[1]))
 
-    print('Encrypted message: ', C)
+            M = input('Enter your message: ')
+            C = encrypt(M, PK)
 
-    DM = decrypt(C, SK)
+            print('Encrypted message: ', C)
+        elif option == '3':
+            SK = input('Enter Secret Key separated by comma: ')
+            SK = SK.split(', ')
+            SK = (int(SK[0]), int(SK[1]), int(SK[2]))
+            
+            C = input('Enter the encrypted message: ')
+            DM = decrypt(int(C), SK)
 
-    print('Decrypted message: ', DM)
-
-    # Caso precise aceitar string -> https://gist.github.com/JekaDeka/c9b0f5da16625e3c7bd1033356354579
+            print('Decrypted message: ', DM)
+        elif option == '4':
+            exit(0)
+        else:
+            print('Wrong option.')
